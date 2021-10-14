@@ -1,0 +1,6 @@
+{
+    "host_neo4j": "51.89.20.204",
+    "port": 7474, 
+    "user_neo4j": "neo4j", 
+    "password_neo4j": "Semantic2020"
+}
