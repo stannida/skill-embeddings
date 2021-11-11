@@ -69,10 +69,10 @@ def get_metrics(attract_repel_skills, companyDataset, gold_standard_df, gold_sta
     skills_annotated_sample['cosine2'] = skills_annotated_sample.apply(lambda x: calc_cosine(x['orig_skill_we'], x['skill2_we']), axis=1)
     skills_annotated_sample['similar_skill'] = skills_annotated_sample.apply(lambda x: x['skill_1'] if x['cosine1']>x['cosine2'] else x['skill_2'], axis=1)
     agreement = len(skills_annotated_sample[skills_annotated_sample['similar_skill']==skills_annotated_sample['Similar annotation']])/len(skills_annotated_sample)
-    jaccard = jaccard_score(skills_annotated_sample['Similar annotation'].to_numpy(), skills_annotated_sample['similar_skill'].to_numpy(), average='macro')
+    # jaccard = jaccard_score(skills_annotated_sample['Similar annotation'].to_numpy(), skills_annotated_sample['similar_skill'].to_numpy(), average='macro')
 
 
-    return roc_score, map_score, map_thresh, max_recall, recall_thresh, jaccard
+    return roc_score, map_score, map_thresh, max_recall, recall_thresh, agreement
 
 if __name__ == "__main__":
     gold_standard = pd.read_excel('resources/20210318/sim_jobs_with_skills.xlsx', dtype=str)
