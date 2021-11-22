@@ -1,8 +1,13 @@
 import pandas as pd
 import numpy as np
+import sys
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import precision_score, recall_score, fbeta_score, average_precision_score
-
+sys.path.insert(1, '/Users/astankevich/tc_libraries/motherdb/include')
+sys.path.insert(1, '/Users/astankevich/tc_libraries/motherdb/topic_ontology')
+sys.path.insert(1, '/Users/astankevich/tc_libraries/motherdb/')
+import mixedPipeline as mp
+from mixedPipelineUtils.performance_measures import measureperformance
 
 def get_map(gold_standard_dict, predictions):
     multibinarizer = MultiLabelBinarizer()
@@ -78,3 +83,43 @@ def retrieve_similar_jobs(dist_matrix, gold_standard_dict, thresh, min_n=3, max_
         else:
             predictions[job_id] = idx
     return predictions
+
+def get_map_score(dfJobSim, gold_standard_dict):
+
+    map_values = []
+    re_values = []
+    map_thresh = []
+    for thresh in np.arange(0, 1.05, 0.05):
+        predictions = retrieve_similar_jobs(dfJobSim, gold_standard_dict, thresh, min_n=2, max_n=10)
+        map_precision, recall = get_map(gold_standard_dict, predictions)
+        map_thresh.append(thresh)
+        map_values.append(map_precision)
+        re_values.append(recall)
+
+    max_map = max(map_values)
+
+    return max_map, map_thresh[map_values.index(max_map)], max(re_values), map_thresh[re_values.index(max(re_values))]
+
+def get_performance_scores(word_vectors, companyDataset, args, gold_standard_df, gold_standard_dict, skills_annotated_sample):
+
+    attract_repel_skills = pd.DataFrame([word_vectors]).transpose().reset_index()
+    attract_repel_skills.rename(columns={'index':'id', 0:'vector'}, inplace=True)
+    attract_repel_skills.set_index('id', inplace=True)
+
+    topicsSimilarities = mp.computeTopicSimilarities(attract_repel_skills)
+
+
+    dfJobSim = mp.compareJobs(companyDataset,topicsSimilarities,eval('mp.simSkillSet'),**args)
+
+    roc_score = measureperformance(dfJobSim, gold_standard_df)
+    map_score, map_thresh, max_recall, recall_thresh = get_map_score(dfJobSim, gold_standard_dict)
+
+    skills_annotated_sample['orig_skill_we'] = skills_annotated_sample['orig_skill'].apply(lambda x: word_vectors[x])
+    skills_annotated_sample['skill1_we'] = skills_annotated_sample['skill_1'].apply(lambda x: word_vectors[x])
+    skills_annotated_sample['skill2_we'] = skills_annotated_sample['skill_2'].apply(lambda x: word_vectors[x])
+    skills_annotated_sample['cosine1'] = skills_annotated_sample.apply(lambda x: calc_cosine(x['orig_skill_we'], x['skill1_we']), axis=1)
+    skills_annotated_sample['cosine2'] = skills_annotated_sample.apply(lambda x: calc_cosine(x['orig_skill_we'], x['skill2_we']), axis=1)
+    skills_annotated_sample['similar_skill'] = skills_annotated_sample.apply(lambda x: x['skill_1'] if x['cosine1']>x['cosine2'] else x['skill_2'], axis=1)
+    jaccard = jaccard_score(skills_annotated_sample['Similar annotation'].to_numpy(), skills_annotated_sample['similar_skill'].to_numpy(), average='macro')
+
+    return roc_score['roc_auc'], map_score, map_thresh, max_recall, recall_thresh, jaccard

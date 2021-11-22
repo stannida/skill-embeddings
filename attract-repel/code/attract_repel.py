@@ -3,6 +3,7 @@ import numpy
 import sys
 import time
 import random 
+import argparse
 import math
 import os
 import sys
@@ -22,15 +23,9 @@ tf.disable_v2_behavior()
 from scipy.spatial.distance import pdist
 from scipy.spatial.distance import squareform
 
-# from utils.helper_functions import calc_cosine
-sys.path.insert(1, '/Users/astankevich/Desktop/thesis/tc_skills')
+# # from utils.helper_functions import calc_cosine
+# sys.path.insert(1, '/Users/astankevich/Desktop/thesis/tc_skills')
 from utils.evaluation import *
-
-sys.path.insert(1, '/Users/astankevich/tc_libraries/motherdb/include')
-sys.path.insert(1, '/Users/astankevich/tc_libraries/motherdb/topic_ontology')
-sys.path.insert(1, '/Users/astankevich/tc_libraries/motherdb/')
-import mixedPipeline as mp
-from mixedPipelineUtils.performance_measures import measureperformance
 
 
 class ExperimentRun:
@@ -111,13 +106,9 @@ class ExperimentRun:
 
         self.numpy_embedding = numpy.zeros((self.vocabulary_size, self.embedding_size), dtype="float32")
         for idx in range(0, self.vocabulary_size):
-            numpy.random.seed(idx)
-            # self.numpy_embedding[idx, :] = distributional_vectors[self.inverted_index[idx]]
-            self.numpy_embedding[idx, :] = numpy.random.rand(self.embedding_size)
-
-
-
-
+            # numpy.random.seed(idx)
+            self.numpy_embedding[idx, :] = distributional_vectors[self.inverted_index[idx]]
+            # self.numpy_embedding[idx, :] = numpy.random.rand(self.embedding_size)
         
     def load_handles(self):
         """
@@ -354,26 +345,6 @@ class ExperimentRun:
 
         return negative_examples
 
-    # def cosine_similarity(self, df):
-    #     df['sim_c.vec'] =  df['we_c.vec'].astype('object')
-    #     df['sim_p.vec'] =  df['we_p.vec'].astype('object')
-
-    #     for word, vector in self.word_vectors.items():
-    #         if len(df.loc[df['c.name']==word, ].index)>0:
-    #             index = df.loc[df['c.name']==word, ].index
-    #             for _id in index:
-    #                 df.at[_id, 'sim_c.vec'] = vector
-    #         else:
-    #             index = df.loc[df['p.name']==word, ].index
-    #             for _id in index:
-    #                 df.at[_id, 'sim_p.vec'] = vector
-
-
-    #     df['post_cosine'] = df.apply(lambda x: calc_cosine(x['sim_c.vec'], x['sim_p.vec']), axis=1)
-    #     print(f'Initial cosine sim: {df["init_cosine"].mean()}, after attract: {df["post_cosine"].mean()}')
-
-
-
 
 
     def attract_repel(self):
@@ -493,45 +464,45 @@ class ExperimentRun:
 
         return (1.0, 1.0)
 
-def get_map_score(dfJobSim, gold_standard_dict):
+# def get_map_score(dfJobSim, gold_standard_dict):
 
-    map_values = []
-    re_values = []
-    map_thresh = []
-    for thresh in np.arange(0, 1.05, 0.05):
-        predictions = retrieve_similar_jobs(dfJobSim, gold_standard_dict, thresh, min_n=2, max_n=10)
-        map_precision, recall = get_map(gold_standard_dict, predictions)
-        map_thresh.append(thresh)
-        map_values.append(map_precision)
-        re_values.append(recall)
+#     map_values = []
+#     re_values = []
+#     map_thresh = []
+#     for thresh in np.arange(0, 1.05, 0.05):
+#         predictions = retrieve_similar_jobs(dfJobSim, gold_standard_dict, thresh, min_n=2, max_n=10)
+#         map_precision, recall = get_map(gold_standard_dict, predictions)
+#         map_thresh.append(thresh)
+#         map_values.append(map_precision)
+#         re_values.append(recall)
 
-    max_map = max(map_values)
+#     max_map = max(map_values)
 
-    return max_map, map_thresh[map_values.index(max_map)], max(re_values), map_thresh[re_values.index(max(re_values))]
+#     return max_map, map_thresh[map_values.index(max_map)], max(re_values), map_thresh[re_values.index(max(re_values))]
 
-def get_performance_scores(word_vectors, companyDataset, args, gold_standard_df, gold_standard_dict, skills_annotated_sample):
+# def get_performance_scores(word_vectors, companyDataset, args, gold_standard_df, gold_standard_dict, skills_annotated_sample):
 
-    attract_repel_skills = pd.DataFrame([word_vectors]).transpose().reset_index()
-    attract_repel_skills.rename(columns={'index':'id', 0:'vector'}, inplace=True)
-    attract_repel_skills.set_index('id', inplace=True)
+#     attract_repel_skills = pd.DataFrame([word_vectors]).transpose().reset_index()
+#     attract_repel_skills.rename(columns={'index':'id', 0:'vector'}, inplace=True)
+#     attract_repel_skills.set_index('id', inplace=True)
 
-    topicsSimilarities = mp.computeTopicSimilarities(attract_repel_skills)
+#     topicsSimilarities = mp.computeTopicSimilarities(attract_repel_skills)
 
 
-    dfJobSim = mp.compareJobs(companyDataset,topicsSimilarities,eval('mp.simSkillSet'),**args)
+#     dfJobSim = mp.compareJobs(companyDataset,topicsSimilarities,eval('mp.simSkillSet'),**args)
 
-    roc_score = measureperformance(dfJobSim, gold_standard_df)
-    map_score, map_thresh, max_recall, recall_thresh = get_map_score(dfJobSim, gold_standard_dict)
+#     roc_score = measureperformance(dfJobSim, gold_standard_df)
+#     map_score, map_thresh, max_recall, recall_thresh = get_map_score(dfJobSim, gold_standard_dict)
 
-    skills_annotated_sample['orig_skill_we'] = skills_annotated_sample['orig_skill'].apply(lambda x: word_vectors[x])
-    skills_annotated_sample['skill1_we'] = skills_annotated_sample['skill_1'].apply(lambda x: word_vectors[x])
-    skills_annotated_sample['skill2_we'] = skills_annotated_sample['skill_2'].apply(lambda x: word_vectors[x])
-    skills_annotated_sample['cosine1'] = skills_annotated_sample.apply(lambda x: calc_cosine(x['orig_skill_we'], x['skill1_we']), axis=1)
-    skills_annotated_sample['cosine2'] = skills_annotated_sample.apply(lambda x: calc_cosine(x['orig_skill_we'], x['skill2_we']), axis=1)
-    skills_annotated_sample['similar_skill'] = skills_annotated_sample.apply(lambda x: x['skill_1'] if x['cosine1']>x['cosine2'] else x['skill_2'], axis=1)
-    jaccard = jaccard_score(skills_annotated_sample['Similar annotation'].to_numpy(), skills_annotated_sample['similar_skill'].to_numpy(), average='macro')
+#     skills_annotated_sample['orig_skill_we'] = skills_annotated_sample['orig_skill'].apply(lambda x: word_vectors[x])
+#     skills_annotated_sample['skill1_we'] = skills_annotated_sample['skill_1'].apply(lambda x: word_vectors[x])
+#     skills_annotated_sample['skill2_we'] = skills_annotated_sample['skill_2'].apply(lambda x: word_vectors[x])
+#     skills_annotated_sample['cosine1'] = skills_annotated_sample.apply(lambda x: calc_cosine(x['orig_skill_we'], x['skill1_we']), axis=1)
+#     skills_annotated_sample['cosine2'] = skills_annotated_sample.apply(lambda x: calc_cosine(x['orig_skill_we'], x['skill2_we']), axis=1)
+#     skills_annotated_sample['similar_skill'] = skills_annotated_sample.apply(lambda x: x['skill_1'] if x['cosine1']>x['cosine2'] else x['skill_2'], axis=1)
+#     jaccard = jaccard_score(skills_annotated_sample['Similar annotation'].to_numpy(), skills_annotated_sample['similar_skill'].to_numpy(), average='macro')
 
-    return roc_score['roc_auc'], map_score, map_thresh, max_recall, recall_thresh, jaccard
+#     return roc_score['roc_auc'], map_score, map_thresh, max_recall, recall_thresh, jaccard
 
 def random_different_from(top_range, number_to_not_repeat):
 
@@ -753,13 +724,12 @@ def simlex_scores(word_vectors, print_simlex=True):
     return simlex_score_en, ws_score_en
 
 
-def run_experiment(config_filepath):
+def run_experiment(config_filepath, save_model, evaluation):
     """
-    This method runs the counterfitting experiment, printing the SimLex-999 score of the initial
-    vectors, then counter-fitting them using the supplied linguistic constraints. 
-    We then print the SimLex-999 score of the final vectors, and save them to a .txt file in the 
-    results directory.
+    This method runs the counterfitting experiment, printing the evaluation metrics of each model. 
+    The config file contains the hyperparameters and paths to the files with distributional vectors and linguistic constraints.
     """
+
     config = configparser.RawConfigParser()
     try:
         config.read(config_filepath)
@@ -776,47 +746,50 @@ def run_experiment(config_filepath):
                         'regularisation_constant': numpy.arange(regularisation_constant_list[0], regularisation_constant_list[1], regularisation_constant_list[2])
                         }
 
-    gold_standard = pd.read_excel('resources/20210318/sim_jobs_with_skills.xlsx', dtype=str)
-    gold_standard_jobs = gold_standard['id'].tolist()
+    if evaluation == True:
+        gold_standard_path = json.loads(config.get("data", "gold_standard"))
+        gold_standard = pd.read_excel(gold_standard_path, dtype=str)
+        gold_standard_jobs = gold_standard['id'].tolist()
 
-    gold_standard_dict = {}
-    for i, row in gold_standard.iterrows():
-        query_id = row['id']
-        similar_jobs = row.filter(regex=("sim.*")).dropna().tolist()
-        gold_standard_jobs.extend(similar_jobs)
-        gold_standard_dict[query_id] = similar_jobs
+        gold_standard_dict = {}
+        for i, row in gold_standard.iterrows():
+            query_id = row['id']
+            similar_jobs = row.filter(regex=("sim.*")).dropna().tolist()
+            gold_standard_jobs.extend(similar_jobs)
+            gold_standard_dict[query_id] = similar_jobs
 
-    gold_standard_df = pd.DataFrame([gold_standard_dict]).transpose().reset_index()
-    gold_standard_df.rename(columns={0:'recs', 'index':'job'}, inplace=True)
-    gold_standard_df.set_index('job', inplace=True)
-    gold_standard_jobs = list(set(gold_standard_jobs))
+        gold_standard_df = pd.DataFrame([gold_standard_dict]).transpose().reset_index()
+        gold_standard_df.rename(columns={0:'recs', 'index':'job'}, inplace=True)
+        gold_standard_df.set_index('job', inplace=True)
+        gold_standard_jobs = list(set(gold_standard_jobs))
 
-    companyDataset = pd.read_excel('resources/company_profiles_with_skills.xlsx')
-    companyDataset['po_id'] = companyDataset['po_id'].astype(str)
-    companyDataset = companyDataset[companyDataset['po_id'].isin(gold_standard_jobs)]
-    companyDataset.set_index('po_id', inplace=True)
-    companyDataset['skills'] = companyDataset['skills'].apply(literal_eval)
-    companyDataset['skills'] = companyDataset['skills'].apply(lambda x: [word.replace(' ', '_') for word in x])
+        companyDataset_path = json.loads(config.get("data", "companyDataset"))
+        companyDataset = pd.read_excel(companyDataset_path)
+        companyDataset['po_id'] = companyDataset['po_id'].astype(str)
+        companyDataset = companyDataset[companyDataset['po_id'].isin(gold_standard_jobs)]
+        companyDataset.set_index('po_id', inplace=True)
+        companyDataset['skills'] = companyDataset['skills'].apply(literal_eval)
+        companyDataset['skills'] = companyDataset['skills'].apply(lambda x: [word.replace(' ', '_') for word in x])
 
-    skills_annotated_sample = pd.read_excel('resources/annotated_skills_siblings.xlsx')
+        skills_annotated_sample_path = json.loads(config.get("data", "skills_annotated_sample"))
+        skills_annotated_sample = pd.read_excel(skills_annotated_sample_path)
 
-    roc_auc_args = {"threshold_scores":[{'threshold': 0.8, 'score': 1.0},
-    {'threshold': 0.75, 'score': 0.75},
-    {'threshold': 0.65, 'score': 0.5},
-    {'threshold': 0.6, 'score': 0.25}]}
+        roc_auc_args = {"threshold_scores":[{'threshold': 0.8, 'score': 1.0},
+        {'threshold': 0.75, 'score': 0.75},
+        {'threshold': 0.65, 'score': 0.5},
+        {'threshold': 0.6, 'score': 0.25}]}
         
     
     current_experiment = ExperimentRun(config_filepath, hyperparameters)
 
-    companyDataset['skills'] = companyDataset['skills'].apply(lambda x: [word for word in x if word in current_experiment.vocabulary])
-
-    attract_repel_scores = []
-
-    
+    if evaluation == True:
+        companyDataset['skills'] = companyDataset['skills'].apply(lambda x: [word for word in x if word in current_experiment.vocabulary])
+        attract_repel_scores = []
 
     for attract_margin in hyperparameters['attract_margin']:
         for batch_size in hyperparameters['batch_size']:
             for regularisation_constant in hyperparameters['regularisation_constant']:
+
                 parameters = f'attract-margin-{str(attract_margin.round(4))}-batch-size-{str(batch_size.round(4))}-l2-{str(regularisation_constant.round(4))}'
                 results_path = 'attract-repel/results/grid_search/results.json'
                 model_exists = False
@@ -824,15 +797,17 @@ def run_experiment(config_filepath):
                     with open(results_path) as feedsjson:
                         feeds = json.load(feedsjson)
 
-                    # for feed in feeds:
-                    #     if feed['attract_margin']==attract_margin and feed['batch_size']==batch_size and feed['l2']==regularisation_constant and feed['random']=='True':
-                    #         print(parameters, ' already exists, skipping')
-                    #         model_exists = True
+                    if save_model == False:
+                        for feed in feeds:
+                            if feed['attract_margin']==attract_margin and feed['batch_size']==batch_size and feed['l2']==regularisation_constant and feed['random']=='True':
+                                print(parameters, ' already exists, skipping')
+                                model_exists = True
 
                 else:
                     with open(results_path, mode='w', encoding='utf-8') as f:
                         json.dump([], f)
                         feeds = []
+
                 if model_exists==False:
                     current_experiment.attract_margin_value = attract_margin
                     current_experiment.batch_size = batch_size
@@ -848,33 +823,32 @@ def run_experiment(config_filepath):
 
                     word_vectors = {k:numpy.round(v, decimals=6) for k, v in current_experiment.word_vectors.items()}
 
+                    if evaluation == True:
+                        roc_score, map_score, map_thresh, max_recall, recall_thresh, agreement = get_performance_scores(
+                                        word_vectors, companyDataset, roc_auc_args, gold_standard_df, 
+                                        gold_standard_dict, skills_annotated_sample)
 
-                    roc_score, map_score, map_thresh, max_recall, recall_thresh, jaccard = get_performance_scores(
-                                    word_vectors, companyDataset, roc_auc_args, gold_standard_df, 
-                                    gold_standard_dict, skills_annotated_sample)
+                        attract_repel_dict = {"random": "True",
+                                "attract_margin":attract_margin,
+                                "batch_size":int(batch_size),
+                                "l2":regularisation_constant,
+                                "roc_score":roc_score, 
+                                "map_score":map_score, 
+                                "map_thresh":map_thresh, 
+                                "max_recall":max_recall, 
+                                "recall_thresh":recall_thresh,
+                                "agreements":agreement}
 
-                    attract_repel_dict = {"random": "True",
-                            "attract_margin":attract_margin,
-                            "batch_size":int(batch_size),
-                            "l2":regularisation_constant,
-                            "roc_score":roc_score, 
-                            "map_score":map_score, 
-                            "map_thresh":map_thresh, 
-                            "max_recall":max_recall, 
-                            "recall_thresh":recall_thresh,
-                            "jaccard":jaccard}
+                        print(f"roc auc: {roc_score} map_score: {map_score} max_recall: {max_recall} jaccard: {jaccard}")
 
-                    # feeds.append(attract_repel_dict)
+                    if save_model == False:
+                        feeds.append(attract_repel_dict)
+                        with open(results_path, mode='w') as f:
+                            f.write(json.dumps(feeds, indent=2))
 
-                    print(f"roc auc: {roc_score} map_score: {map_score} max_recall: {max_recall} jaccard: {jaccard}")
-
-                    # with open(results_path, mode='w') as f:
-                    #     f.write(json.dumps(feeds, indent=2))
-
-                    save_path = 'attract-repel/results/grid_search/'+parameters+'_random.txt'
-
-                    
-                    print_word_vectors(current_experiment.word_vectors, save_path)
+                    else:
+                        save_path = 'attract-repel/results/grid_search/'+parameters+'_random.txt'
+                        print_word_vectors(current_experiment.word_vectors, save_path)
 
 def read_process(pickle_path):
     df = pd.read_pickle(pickle_path)
@@ -889,19 +863,20 @@ def main():
     The user can provide the location of the config file as an argument. 
     If no location is specified, the default config file (experiment_parameters.cfg) is used.
     """
-    try:
-        config_filepath = sys.argv[1]
-        # path_skills_df = sys.argv[2]
-    except:
-        print("\nUsing the default config file: experiment_parameters.cfg\n Using the default all skills pickle")
-        config_filepath = "attract-repel/config/experiment_parameters_all.cfg"
-        # path_skills_df = "resources/skills_pickles/all_skills_siblings.pkl"
+    parser = argparse.ArgumentParser(
+        description="""Attract-Repel training
+        """)
 
-    # df = read_process(path_skills_df)
+    parser.add_argument('-c', '--config_file', default='attract-repel/config/experiment_parameters.cfg', required=False, help='Path to the config file')
+    parser.add_argument('-s', '--save_model', default=False, required=False, help='Whether to save a model file or not, default false')
+    parser.add_argument('-e', '--evaluation', default=True, required=False, help='Whether to run the evaluation or not, default true')
 
+    args = parser.parse_args()
+    config_filepath = args.config_file
+    save_model = args.save_model
+    evaluation = args.evaluation
 
-
-    run_experiment(config_filepath)
+    run_experiment(config_filepath, save_model, evaluation)
 
 
 if __name__=='__main__':
